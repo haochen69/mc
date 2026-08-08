@@ -16,13 +16,13 @@
 <body>
   <div class="container">
     <h1>Copy code</h1>
-    <p>This page copies a code to your clipboard. Please click the <strong>Copy</strong> button to allow the browser to grant clipboard access.</p>
+    <p>This page copies a code to your clipboard. The page will try to copy automatically when it loads. If your browser blocks automatic clipboard access, a Copy button will appear.</p>
 
     <label for="code">Code</label>
     <textarea id="code" rows="2" readonly>10020030009843ac10c2ab3fa62e11e8474ec4f6b8</textarea>
 
     <div>
-      <button id="copy">Copy</button>
+      <button id="copy" hidden>Copy</button>
       <button id="close" disabled>Close</button>
     </div>
 
@@ -59,7 +59,6 @@
 
         // Legacy fallback using a temporary textarea and document.execCommand('copy')
         try {
-          // Make a temporary textarea (not the readonly one) so we can select it
           const ta = document.createElement('textarea');
           ta.value = text;
           // Prevent scrolling to bottom on iOS
@@ -82,25 +81,51 @@
         }
       }
 
-      copyBtn.addEventListener('click', async () => {
+      async function tryAutoCopy() {
         setStatus('Copying...');
         const text = codeEl.value;
         const ok = await copyText(text);
         if (ok) {
           setStatus('Code copied to clipboard.');
           closeBtn.disabled = false;
-          // Optionally auto-close if this window was opened via window.open()
-          // We'll only try to auto-close when the page was opened by script (window.opener exists)
+          // If the page was opened by script, try to close it silently
           if (window.opener) {
-            try {
-              window.close();
-            } catch (err) {
-              // ignore; user can click Close button
-            }
+            try { window.close(); } catch (err) { /* ignore */ }
+          }
+        } else {
+          // Show fallback UI so user can copy manually
+          setStatus('Automatic copy blocked by the browser. Please click the Copy button or select the code and press Ctrl/Cmd+C.', true);
+          copyBtn.hidden = false;
+          copyBtn.focus();
+          closeBtn.disabled = false; // allow user to close even if auto-copy failed
+        }
+      }
+
+      // Attempt automatic copy on load. Many browsers only allow this when the page
+      // was opened by a user gesture (e.g. window.open from a click). If it's blocked
+      // we'll show the Copy button so the user can trigger it.
+      window.addEventListener('load', () => {
+        // Delay a tiny bit to ensure UI is ready (and for some browsers that
+        // only allow clipboard on user gestures, this still won't help, but it's fine)
+        setTimeout(() => {
+          tryAutoCopy();
+        }, 50);
+      });
+
+      // Keep the manual copy handler for fallback
+      copyBtn.addEventListener('click', async () => {
+        setStatus('Copying...');
+        const text = codeEl.value;
+        const ok = await copyText(text);
+        if (ok) {
+          setStatus('Code copied to clipboard.');
+          copyBtn.hidden = true;
+          closeBtn.disabled = false;
+          if (window.opener) {
+            try { window.close(); } catch (err) { /* ignore */ }
           }
         } else {
           setStatus('Failed to copy automatically. Please select the code and press Ctrl/Cmd+C to copy it manually.', true);
-          closeBtn.disabled = false; // still allow user to close the tab
         }
       });
 
@@ -108,7 +133,6 @@
         try {
           window.close();
         } catch (err) {
-          // Some browsers block script-initiated closes for tabs not opened by script.
           setStatus('Unable to close window programmatically. Please close the tab manually.', true);
         }
       });
