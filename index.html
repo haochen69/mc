@@ -1,4 +1,6 @@
-<!DOCTYPE html><html><body>
+<!DOCTYPE html>
+<html>
+<body>
     <script>
         window.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -17,13 +19,11 @@
             // 2. Instantly boots Minecraft Education
             window.location.href = "minecraftedu://?joincode=1";
 
-            // 3. Closes the tab immediately after launching
+            // 3. Closes the tab exactly 5 seconds (5000ms) after launching
             setTimeout(() => {
                 window.close();
-            }, 500); 
+            }, 5000); 
         });
     </script>
-
-
-          
-        </body></html>
+</body>
+</html>
