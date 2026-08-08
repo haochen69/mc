@@ -1,23 +1,119 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Copy code</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding: 2rem; }
+    .container { max-width: 640px; margin: 0 auto; }
+    textarea { width: 100%; font-family: monospace; font-size: 1rem; padding: .5rem; box-sizing: border-box; }
+    button { margin-top: .5rem; padding: .5rem 1rem; font-size: 1rem; }
+    .status { margin-top: .5rem; color: #0b6623; }
+    .error { color: #8b0000; }
+  </style>
+</head>
 <body>
-    <script>
-        window.addEventListener('DOMContentLoaded', async () => {
-            try {
-                // 1. Instantly copies the code to the clipboard
-                await navigator.clipboard.writeText("10020030009843ac10c2ab3fa62e11e8474ec4f6b8");
-            } catch (err) {
-                // Fallback method
-                const el = document.createElement('textarea');
-                el.value = "10020030009843ac10c2ab3fa62e11e8474ec4f6b8";
-                document.body.appendChild(el);
-                el.select();
-                document.execCommand('copy');
-                document.body.removeChild(el);
-            }
+  <div class="container">
+    <h1>Copy code</h1>
+    <p>This page copies a code to your clipboard. Please click the <strong>Copy</strong> button to allow the browser to grant clipboard access.</p>
 
-                window.close();
-        });
-    </script>
+    <label for="code">Code</label>
+    <textarea id="code" rows="2" readonly>10020030009843ac10c2ab3fa62e11e8474ec4f6b8</textarea>
+
+    <div>
+      <button id="copy">Copy</button>
+      <button id="close" disabled>Close</button>
+    </div>
+
+    <div id="status" class="status" aria-live="polite"></div>
+  </div>
+
+  <script>
+    (function () {
+      const codeEl = document.getElementById('code');
+      const copyBtn = document.getElementById('copy');
+      const closeBtn = document.getElementById('close');
+      const statusEl = document.getElementById('status');
+
+      function setStatus(msg, isError) {
+        statusEl.textContent = msg;
+        if (isError) {
+          statusEl.classList.add('error');
+        } else {
+          statusEl.classList.remove('error');
+        }
+      }
+
+      async function copyText(text) {
+        // Prefer navigator.clipboard when available and allowed
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          try {
+            await navigator.clipboard.writeText(text);
+            return true;
+          } catch (err) {
+            // fall through to legacy fallback
+            // (usually fails when not triggered by a user gesture or because of insecure context)
+          }
+        }
+
+        // Legacy fallback using a temporary textarea and document.execCommand('copy')
+        try {
+          // Make a temporary textarea (not the readonly one) so we can select it
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          // Prevent scrolling to bottom on iOS
+          ta.style.position = 'fixed';
+          ta.style.top = 0;
+          ta.style.left = 0;
+          ta.style.width = '1px';
+          ta.style.height = '1px';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+
+          const successful = document.execCommand('copy');
+          document.body.removeChild(ta);
+          return successful;
+
+        } catch (err) {
+          return false;
+        }
+      }
+
+      copyBtn.addEventListener('click', async () => {
+        setStatus('Copying...');
+        const text = codeEl.value;
+        const ok = await copyText(text);
+        if (ok) {
+          setStatus('Code copied to clipboard.');
+          closeBtn.disabled = false;
+          // Optionally auto-close if this window was opened via window.open()
+          // We'll only try to auto-close when the page was opened by script (window.opener exists)
+          if (window.opener) {
+            try {
+              window.close();
+            } catch (err) {
+              // ignore; user can click Close button
+            }
+          }
+        } else {
+          setStatus('Failed to copy automatically. Please select the code and press Ctrl/Cmd+C to copy it manually.', true);
+          closeBtn.disabled = false; // still allow user to close the tab
+        }
+      });
+
+      closeBtn.addEventListener('click', () => {
+        try {
+          window.close();
+        } catch (err) {
+          // Some browsers block script-initiated closes for tabs not opened by script.
+          setStatus('Unable to close window programmatically. Please close the tab manually.', true);
+        }
+      });
+
+    })();
+  </script>
 </body>
 </html>
