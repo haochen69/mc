@@ -19,9 +19,8 @@
         textarea.select();
         document.execCommand("copy");
         document.body.removeChild(textarea);
-      } finally {
-        window.close();
       }
+      // window.close() removed so the page will remain open after copying.
     }
 
     window.addEventListener("DOMContentLoaded", copyAndClose);
